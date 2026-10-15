@@ -1,0 +1,79 @@
+
+import org.springframework.boot.*;
+import org.springframework.boot.autoconfigure.*;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.http.*;
+import java.util.*;
+
+@SpringBootApplication
+public class MovieCatalogApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(MovieCatalogApplication.class,args);
+    }
+}
+
+class Movie {
+    public int id, durationMinutes;
+    public String title, director, genre;
+    public double rating;
+    public boolean nowShowing;
+}
+
+@RestController
+@RequestMapping("/api/movies")
+class MovieController {
+    List<Movie> list = new ArrayList<>();
+    int id = 1;
+
+    @PostMapping
+    ResponseEntity<?> add(@RequestBody Movie m) {
+        m.id = id++;
+        list.add(m);
+        return ResponseEntity.status(201).body(m);
+    }
+
+    @GetMapping
+    List<Movie> all() {
+        return list;
+    }
+
+    @GetMapping("/{id}")
+    ResponseEntity<?> get(@PathVariable int id) {
+        return list.stream().filter(m -> m.id == id)
+            .findFirst().map(m -> ResponseEntity.ok(m))
+            .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}")
+    ResponseEntity<?> update(@PathVariable int id,
+                             @RequestBody Movie m) {
+        for (int i = 0; i < list.size(); i++)
+            if (list.get(i).id == id) {
+                m.id = id;
+                list.set(i, m);
+                return ResponseEntity.ok(m);
+            }
+        return ResponseEntity.notFound().build();
+    }
+
+    @PatchMapping("/{id}")
+    ResponseEntity<?> patch(@PathVariable int id,
+                            @RequestBody Map<String,Object> p) {
+        for (Movie m : list)
+            if (m.id == id) {
+                if (p.containsKey("title"))
+                    m.title = (String)p.get("title");
+                if (p.containsKey("rating"))
+                    m.rating = ((Number)p.get("rating")).doubleValue();
+                return ResponseEntity.ok(m);
+            }
+        return ResponseEntity.notFound().build();
+    }
+
+    @DeleteMapping("/{id}")
+    ResponseEntity<?> delete(@PathVariable int id) {
+        return list.removeIf(m -> m.id == id)
+            ? ResponseEntity.noContent().build()
+            : ResponseEntity.notFound().build();
+    }
+}
